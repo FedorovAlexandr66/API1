@@ -1,39 +1,17 @@
-import xml.etree.ElementTree as ET
+from itertools import groupby
 from urllib.request import urlopen
-import json
+from json import loads
+import datetime
+
+id = '183903'
+url = 'https://ru.wikipedia.org/w/api.php?action=query&format=json&prop=revisions&rvlimit=500&titles=%D0%93%D1%80%D0%B0%D0%B4%D1%81%D0%BA%D0%B8%D0%B9,_%D0%90%D0%BB%D0%B5%D0%BA%D1%81%D0%B0%D0%BD%D0%B4%D1%80_%D0%91%D0%BE%D1%80%D0%B8%D1%81%D0%BE%D0%B2%D0%B8%D1%87'
+data = loads(urlopen(url).read().decode('utf8'))
+rev = data['query']['pages'][id]['revisions']
 
 
-def get_top_limb():
-    data = urlopen('https://lenta.ru/rss').read().decode('utf8')
-    root = ET.fromstring(data)
-    return root[0]
+def convert_date(r):
+    return datetime.datetime.strptime(r['timestamp'], '%Y-%m-%dT%H:%M:%SZ').date()
 
 
-def get_uncos(ch: ET.Element):
-    uncos = []
-    for i in ch.findall('item'):
-        uncos.append({
-            'pubDate': i.find('pubDate').text,
-            'title': i.find('title').text
-        })
-    return uncos
-
-
-def get_full_uncos(ch: ET.Element):
-    full_uncos = []
-    for i in ch.findall('item'):
-        fields_dict = {}
-        for f in i:
-            fields_dict[f.tag] = f.text
-        full_uncos.append(fields_dict)
-    return full_uncos
-
-
-def keep_json(file_name, uncos):
-    json_file = json.dumps(uncos, ensure_ascii=False).encode('utf8')
-    with open(file_name, 'wb') as f:
-        f.write(json_file)
-
-
-channel = get_top_limb()
-keep_json("full_uncos.json", get_full_uncos(channel))
+for key, group_items in groupby(rev, key=convert_date):
+    print(key, sum(1 for i in group_items))
